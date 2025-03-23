@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AppController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 
@@ -22,7 +23,7 @@ Route::get('/', function () {
 
 Route::get('/app', function () {
     return response()->file(public_path('app.html'));
-});
+})->name('app');
 
 // déconnexion
 Route::post('/logout', function () {
@@ -32,3 +33,5 @@ Route::post('/logout', function () {
     return redirect('/'); // Redirection après déconnexion
 })->name('logout');
 
+//API
+Route::get('/users', [AppController::class, 'index']);

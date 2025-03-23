@@ -34,8 +34,7 @@ class AuthController extends Controller
 
         // Connexion automatique après inscription
         Auth::login($user);
-
-        return redirect()->route('app')->with('Inscription réussie !');
+        return redirect()->route('app');
     }
     public function login(Request $request)
     {
