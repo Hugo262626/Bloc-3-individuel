@@ -36,7 +36,11 @@ class AuthController extends Controller
         Auth::login($user);
         return redirect()->route('app');
     }
-    public function login(Request $request)
+
+    public function showLoginForm()
+    {
+        return view('auth.login');}
+        public function login(Request $request)
     {
         // Validation des données
         $validated = $request->validate([
@@ -47,7 +51,7 @@ class AuthController extends Controller
         // Authentifier l'utilisateur
         if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
             // Connexion réussie
-            return redirect()->route('home'); // Redirige vers la page d'accueil ou une autre page
+            return redirect()->route('app'); // Redirige vers la page d'accueil ou une autre page
         } else {
             // Échec de la connexion
             return back()->withErrors(['email' => 'Identifiants incorrects.']);

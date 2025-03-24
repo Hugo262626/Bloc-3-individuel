@@ -9,13 +9,12 @@ use Illuminate\Support\Facades\Auth;
 Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register.form');
 Route::post('/register', [AuthController::class, 'register'])->name('register');
 
-// afficher la page de connexion
-Route::get('/login', function () {
-    return view('login');
-})->name('login.form');
-
-// utilisation du formulaire d'inscription (connecté)
+Route::get('/login', [AuthController::class, 'showLoginForm'])->name('Login.form');
 Route::post('/login', [AuthController::class, 'login'])->name('login');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/app', [DashboardController::class, 'index'])->name('app');
+});
 
 Route::get('/', function () {
     return response()->file(public_path('index.html'));

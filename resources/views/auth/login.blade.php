@@ -24,13 +24,14 @@
 
 <form action="{{ route('login') }}" method="POST">
     @csrf
-    <label for="email">Email :</label>
-    <input type="email" name="email" required>
+    <div class="container w-50 px-lg-5">
+    <label for="email" class="form-label">Email :</label>
+    <input type="email" name="email" class="form-control" required>
 
-    <label for="password">Mot de passe :</label>
-    <input type="password" name="password" required>
+    <label for="password" class="form-label">Mot de passe :</label>
+    <input type="password" name="password" class="form-control" required>
 
-    <button type="submit">Se connecter</button>
+    <button type="submit" class="btn btn-lg btn-primary mt-5">Se connecter</button>
 </form>
 </body>
 </html>
