@@ -8,6 +8,21 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
+Route::get('/check-token', function (Request $request) {
+    try {
+        // Récupérer l'utilisateur à partir du token
+        $user = JWTAuth::parseToken()->authenticate();
+        return response()->json(['message' => 'Token valide', 'user' => $user]);
+    } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
+        return response()->json(['error' => 'Token expiré'], 401);
+    } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
+        return response()->json(['error' => 'Token invalide'], 401);
+    } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
+        return response()->json(['error' => 'Token absent'], 401);
+    }
+});
+
+
 class AuthController extends Controller
 {
     // Affichage du formulaire d'inscription
@@ -60,7 +75,7 @@ class AuthController extends Controller
         // Tenter de se connecter avec les identifiants fournis
         if ($token = JWTAuth::attempt($credentials)) {
             // Connexion réussie, retour du token JWT
-            return redirect()->route('app')->with(['token', $token]); // Redirection vers la page 'app' avec le token
+            return redirect()->route('app')->with('token', $token);    // Redirection vers la page 'app' avec le token
 
         }
 
@@ -71,11 +86,11 @@ class AuthController extends Controller
     }
 
     // Retourner les informations de l'utilisateur connecté
-    public function me()
+    public function me(Request $request)
     {
-        $user = auth()->user();
-        return response()->json($user);
+        return response()->json(auth()->user());
     }
+
 
     // Déconnexion (supprimer le token JWT)
     public function logout()

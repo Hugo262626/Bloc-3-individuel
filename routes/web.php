@@ -6,6 +6,16 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Api\AppController;
 use Illuminate\Support\Facades\Auth;
 
+Route::get('/check-token', function () {
+    try {
+        $user = auth()->user();
+        return response()->json(['message' => 'Token valide', 'user' => $user]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => 'Token invalide'], 401);
+    }
+})->middleware('auth:api');
+
+
 // Authentification
 Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register.form');
 Route::post('/register', [AuthController::class, 'register'])->name('register');
