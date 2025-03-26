@@ -1,52 +1,51 @@
 <?php
 
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\Api\AppController;
 use Illuminate\Support\Facades\Auth;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
-Route::get('/check-token', function () {
+Route::get('/check-token', function (Request $request) {
     try {
-        $user = auth()->user();
+        // Récupérer l'utilisateur à partir du token
+        $user = JWTAuth::parseToken()->authenticate();
         return response()->json(['message' => 'Token valide', 'user' => $user]);
-    } catch (\Exception $e) {
+    } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
+        return response()->json(['error' => 'Token expiré'], 401);
+    } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
         return response()->json(['error' => 'Token invalide'], 401);
+    } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
+        return response()->json(['error' => 'Token absent'], 401);
     }
-})->middleware('auth:api');
+});
 
 
-// Authentification
+Route::middleware(['auth:api'])->get('/app', function () {
+    return view('app');
+})->name('app');
+
+
+Route::get('/', function () {
+    return response()->file(public_path('index.html'));
+});
+// Routes pour login et logout
+Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login.form');
+Route::post('/login', [AuthController::class, 'login'])->name('login');
+
 Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register.form');
 Route::post('/register', [AuthController::class, 'register'])->name('register');
-Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
-
-// Routes protégées (utilisation de auth:api pour JWT)
-Route::middleware(['auth:api'])->group(function () {
-Route::get('/user', [AuthController::class, 'me']);
-Route::post('/logout', [AuthController::class, 'logout']);
-Route::get('/app', [AppController::class, 'index'])->name('app');  //route protégé
-});
-
-Route::middleware(['jwt.auth'])->group(function () {
-    Route::get('/profile', [AuthController::class, 'profile'])->name('profile');
-    Route::post('/profile/update', [AuthController::class, 'updateProfile'])->name('profile.update');
-});
-
-
-// Page d'accueil
-Route::get('/', function () {
-return response()->file(public_path('index.html'));
-});
 
 // Déconnexion
 Route::post('/logout', function () {
-Auth::logout();
-request()->session()->invalidate();
-request()->session()->regenerateToken();
-return redirect('/');
+    Auth::logout();
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
+    return redirect('/');
 })->name('logout');
 
-// API publique
-Route::get('/users', [AppController::class, 'index']);
+
+Route::middleware(['auth:api'])->get('/profile', function () {
+    return view('profile');
+})->name('profile');

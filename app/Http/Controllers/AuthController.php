@@ -7,21 +7,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Facades\JWTAuth;
-
-Route::get('/check-token', function (Request $request) {
-    try {
-        // Récupérer l'utilisateur à partir du token
-        $user = JWTAuth::parseToken()->authenticate();
-        return response()->json(['message' => 'Token valide', 'user' => $user]);
-    } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
-        return response()->json(['error' => 'Token expiré'], 401);
-    } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
-        return response()->json(['error' => 'Token invalide'], 401);
-    } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
-        return response()->json(['error' => 'Token absent'], 401);
-    }
-});
-
+use Tymon\JWTAuth\Exceptions\JWTException;
 
 class AuthController extends Controller
 {
@@ -37,91 +23,145 @@ class AuthController extends Controller
         // Validation des champs
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|min:6|confirmed'
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|min:6|confirmed',
+            'description' => 'nullable|string',
+            'birth' => 'nullable|date',
         ]);
 
-        // Création de l'utilisateur
-        $user = User::create([
-            'name' => $request->name,
-            'description' => $request->description,
-            'email' => $request->email,
-            'birth' => $request->birth,
-            'password' => Hash::make($request->password),
-        ]);
+        try {
+            // Création de l'utilisateur
+            $user = User::create([
+                'name' => $request->name,
+                'description' => $request->description,
+                'email' => $request->email,
+                'birth' => $request->birth,
+                'password' => Hash::make($request->password),
+            ]);
 
-        // Connexion automatique après inscription
-        Auth::login($user);
+            // Générer un token JWT
+            $token = JWTAuth::fromUser($user);
 
-        // Générer un token JWT
-        $token = JWTAuth::fromUser($user);
-
-        // Rediriger vers la route 'app' avec le token
-        return redirect()->route('app')->with('token', $token); // Ajoute le token à la session si nécessaire
+            // Retourner une réponse JSON avec le token
+            return response()->json([
+                'message' => 'Inscription réussie',
+                'token' => $token,
+                'user' => $user,
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Erreur lors de l’inscription',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     // Affichage du formulaire de connexion
     public function showLoginForm()
     {
-        return view('auth.login'); // Vue de connexion (assure-toi que tu as une vue 'auth.login')
+        return view('auth.login');
     }
 
     // Connexion de l'utilisateur
     public function login(Request $request)
     {
         // Validation des données
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
+
         $credentials = $request->only('email', 'password');
 
-        // Tenter de se connecter avec les identifiants fournis
-        if ($token = JWTAuth::attempt($credentials)) {
-            // Connexion réussie, retour du token JWT
-            return redirect()->route('app')->with('token', $token);    // Redirection vers la page 'app' avec le token
+        try {
+            // Tenter de générer un token JWT
+            if (!$token = JWTAuth::attempt($credentials)) {
+                return response()->json([
+                    'message' => 'Identifiants invalides',
+                ], 401);
+            }
 
+            // Retourner le token dans une réponse JSON
+            return response()->json([
+                'message' => 'Connexion réussie',
+                'token' => $token,
+                'user' => auth('api')->user(), // Récupère l'utilisateur authentifié via JWT
+            ]);
+        } catch (JWTException $e) {
+            return response()->json([
+                'message' => 'Erreur lors de la création du token',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        // Identifiants invalides
-        return response()->json([
-            'message' => 'Identifiants invalides',
-        ], 401);
     }
 
     // Retourner les informations de l'utilisateur connecté
     public function me(Request $request)
     {
-        return response()->json(auth()->user());
+        try {
+            $user = auth('api')->user();
+            if (!$user) {
+                return response()->json(['message' => 'Utilisateur non authentifié'], 401);
+            }
+            return response()->json($user);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Erreur', 'error' => $e->getMessage()], 500);
+        }
     }
 
-
-    // Déconnexion (supprimer le token JWT)
+    // Déconnexion (invalider le token JWT)
     public function logout()
     {
-        auth()->logout();
-        return response()->json(['message' => 'Déconnexion réussie']);
+        try {
+            JWTAuth::invalidate(JWTAuth::getToken());
+            return response()->json(['message' => 'Déconnexion réussie']);
+        } catch (JWTException $e) {
+            return response()->json([
+                'message' => 'Erreur lors de la déconnexion',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function profile()
     {
-        $user = auth()->user(); // Récupère l'utilisateur connecté
+        $user = auth('api')->user();
+        if (!$user) {
+            return response()->json(['message' => 'Utilisateur non authentifié'], 401);
+        }
         return response()->json($user);
     }
+
+    // Mettre à jour les informations du profil
     public function updateProfile(Request $request)
     {
-        $user = auth()->user(); // Récupère l'utilisateur connecté
+        $user = auth('api')->user();
+        if (!$user) {
+            return response()->json(['message' => 'Utilisateur non authentifié'], 401);
+        }
 
         // Validation des données
         $request->validate([
             'name' => 'string|max:255',
             'email' => 'email|unique:users,email,' . $user->id,
             'description' => 'nullable|string',
+            'birth' => 'nullable|date',
             'photo' => 'nullable|image|max:2048', // Image max 2MB
+            'password' => 'nullable|min:6|confirmed',
         ]);
 
-        // Mettre à jour les informations
-        $user->name = $request->name ?? $user->name;
-        $user->email = $request->email ?? $user->email;
-        $user->description = $request->description ?? $user->description;
+        // Mise à jour des champs (seuls ceux fournis dans la requête)
+        $user->name = $request->input('name', $user->name);
+        $user->email = $request->input('email', $user->email);
+        $user->description = $request->input('description', $user->description);
+        $user->birth = $request->input('birth', $user->birth);
 
-        // Gestion de l'upload de la photo de profil
+        // Mise à jour du mot de passe si fourni
+        if ($request->filled('password')) {
+            $user->password = Hash::make($request->password);
+        }
+
+        // Gestion de la photo de profil
         if ($request->hasFile('photo')) {
             $file = $request->file('photo');
             $filename = time() . '.' . $file->getClientOriginalExtension();
@@ -129,9 +169,11 @@ class AuthController extends Controller
             $user->photo = '/uploads/' . $filename;
         }
 
-        $user->save(); // Sauvegarde les modifications
+        $user->save();
 
-        return response()->json(['message' => 'Profil mis à jour avec succès', 'user' => $user]);
+        return response()->json([
+            'message' => 'Profil mis à jour avec succès',
+            'user' => $user,
+        ]);
     }
-
 }
