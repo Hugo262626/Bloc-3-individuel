@@ -4,9 +4,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use Tymon\JWTAuth\Facades\JWTAuth;
+use App\Http\Controllers\Api\AppController;
 
 Route::get('/', function () {
-    return view('welcome'); // Remplace index.html par une vue Blade si nécessaire
+    return response()->file(public_path('index.html'));
 });
 
 // Routes pour login et register
@@ -29,10 +30,18 @@ Route::post('/logout', function (Request $request) {
 })->name('logout')->middleware('auth:api');
 
 // Routes protégées par auth:api
-Route::middleware(['auth:api'])->get('/app', function () {
+Route::get('/app', function () {
     return view('app');
 })->name('app');
-
 Route::middleware(['auth:api'])->get('/profile', function () {
     return view('profile');
 })->name('profile');
+
+Route::middleware(['auth:api'])->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/profile/me', [AuthController::class, 'profile']);
+    Route::get('/users', [AppController::class, 'getUsers'])->name('users');
+    Route::patch('/profile', [AuthController::class, 'updateProfile']);
+});
+
+

@@ -78,28 +78,9 @@
 
             if (registerData.token) {
                 // Stocker le token
-                localStorage.setItem('token', registerData.token);
+                sessionStorage.setItem('token', registerData.token);
+                window.location.href='/app';
 
-                // Étape 2 : Charger /app manuellement avec le token
-                const appResponse = await fetch('/app', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': 'Bearer ' + registerData.token,
-                        'Accept': 'text/html',
-                    },
-                });
-
-                if (appResponse.ok) {
-                    const html = await appResponse.text();
-                    document.open();
-                    document.write(html);
-                    document.close();
-                    // Mettre à jour l’URL sans recharger
-                    window.history.pushState({}, document.title, '/app');
-                } else {
-                    console.error('Erreur lors du chargement de /app:', appResponse.status, appResponse.statusText);
-                    document.getElementById('error-message').innerText = 'Erreur d’accès à la page : ' + appResponse.statusText;
-                }
             } else {
                 document.getElementById('error-message').innerText = registerData.message || 'Erreur inconnue';
             }

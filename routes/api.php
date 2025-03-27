@@ -28,7 +28,7 @@ Route::post('/login', [AuthController::class, 'login']);
 // Routes protégées avec le middleware 'auth:api' pour JWT
 Route::middleware(['auth:api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/users', [AppController::class, 'getUsers']); // Utilisation de AppController
     Route::get('/profile', [AuthController::class, 'profile']);
     Route::post('/profile', [AuthController::class, 'updateProfile']);
 });
+Route::get('/users', [AppController::class, 'getUsers'])->name('users');

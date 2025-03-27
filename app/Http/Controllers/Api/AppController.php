@@ -6,11 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 
-class ApiUserController extends Controller
+class AppController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:api');
+
     }
 
     public function getUsers()

@@ -58,26 +58,8 @@
 
             if (loginData.token) {
                 // Stocker le token dans localStorage
-                localStorage.setItem('token', loginData.token);
-
-                // Charger la page /app avec le token
-                const appResponse = await fetch('/app', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': 'Bearer ' + loginData.token,
-                        'Accept': 'text/html',
-                    },
-                });
-
-                if (appResponse.ok) {
-                    const html = await appResponse.text();
-                    document.open();
-                    document.write(html);
-                    document.close();
-                } else {
-                    console.error('Erreur lors du chargement de /app:', appResponse.status, appResponse.statusText);
-                    document.getElementById('error-message').innerText = 'Erreur d’accès à la page : ' + appResponse.statusText;
-                }
+                sessionStorage.setItem('token', loginData.token);
+                window.location.href='/app'
             } else {
                 document.getElementById('error-message').innerText = loginData.message || 'Erreur inconnue';
             }

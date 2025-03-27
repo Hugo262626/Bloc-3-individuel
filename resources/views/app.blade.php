@@ -23,7 +23,7 @@
                 </div>
             </a>
             <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
-                <a href="#" class="dropdown-item" id="profile-link">Profil</a>
+                <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#profile-modal">Profil</button>
                 <div class="dropdown-divider"></div>
                 <form id="logout-form" style="display: inline;">
                     <button type="submit" class="dropdown-item">Déconnexion</button>
@@ -94,43 +94,72 @@
         </div>
     </div>
 </div>
+<div class="modal" tabindex="-1" id="profile-modal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Mon profil</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="container w-50 px-lg-5 mt-5">
+                    <h2>Mon Profil</h2>
 
+                    <div id="profile-info" class="mb-4">
+                        <!-- Les données seront chargées ici -->
+                    </div>
+
+                    <form id="profile-form" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Nom :</label>
+                            <input type="text" name="name" id="name" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email :</label>
+                            <input type="email" name="email" id="email" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Présentation :</label>
+                            <textarea name="description" id="description" class="form-control"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="birth" class="form-label">Date de naissance :</label>
+                            <input type="date" name="birth" id="birth" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label for="photo" class="form-label">Photo de profil :</label>
+                            <input type="file" name="photo" id="photo" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Nouveau mot de passe (optionnel) :</label>
+                            <input type="password" name="password" id="password" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label for="password_confirmation" class="form-label">Confirmer le mot de passe :</label>
+                            <input type="password" name="password_confirmation" id="password_confirmation" class="form-control">
+                        </div>
+                    </form>
+
+                    <div id="message" class="mt-3"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-primary">Sauvegarder</button>
+            </div>
+        </div>
+    </div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/js/tabler.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <script>
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     console.log('Token initial:', token);
-
-    // Vérification au chargement de la page
-    window.addEventListener('load', async () => {
-        console.log('Événement load déclenché');
-        if (!token) {
-            console.log('Aucun token, redirection vers /login');
-            window.location.href = '/login';
-            return;
-        }
-
-        try {
-            console.log('Requête vers /app');
-            const response = await fetch('/app', {
-                headers: {
-                    'Authorization': 'Bearer ' + token,
-                    'Accept': 'text/html',
-                },
-            });
-
-            console.log('Statut /app:', response.status, response.statusText);
-
-            if (!response.ok) {
-                console.error('Erreur lors du rechargement:', response.status, response.statusText);
-                if (response.status === 401) {
-                    console.log('Token invalide ou expiré, redirection vers /login');
-                    localStorage.removeItem('token');
-                    window.location.href = '/login';
-                }
-                return;
-            }
-
+    if (!token) {
+        console.log('Aucun token, redirection vers /login');
+        window.location.href = '/login';
+    }
+try{
             // Charger les données
             console.log('Chargement des données utilisateur, utilisateurs et carte');
             loadUserData();
@@ -140,28 +169,37 @@
             console.error('Erreur lors du chargement initial:', error);
             window.location.href = '/login';
         }
-    });
 
     // Charger les données de l'utilisateur pour la navbar
     async function loadUserData() {
         try {
-            console.log('Requête vers /profile');
-            const response = await fetch('/profile', {
+            console.log('Requête vers /profile/me');
+            const response = await fetch('/profile/me', {
                 headers: {
                     'Authorization': 'Bearer ' + token,
                     'Accept': 'application/json',
                 },
             });
 
-            console.log('Statut /profile:', response.status, response.statusText);
+            console.log('Statut /profile/me:', response.status, response.statusText);
 
             if (!response.ok) {
-                throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+               // throw new Error(`Erreur ${response.status}: ${response.statusText}`);
             }
 
             const data = await response.json();
             console.log('Données utilisateur:', data);
-
+            document.getElementById('name').value = data.name || '';
+            document.getElementById('email').value = data.email || '';
+            document.getElementById('description').value = data.description || '';
+            document.getElementById('birth').value = data.birth || '';
+            document.getElementById('profile-info').innerHTML = `
+                    <p><strong>Nom :</strong> ${data.name || 'Non défini'}</p>
+                    <p><strong>Email :</strong> ${data.email || 'Non défini'}</p>
+                    <p><strong>Présentation :</strong> ${data.description || 'Non définie'}</p>
+                    <p><strong>Date de naissance :</strong> ${data.birth || 'Non définie'}</p>
+                    ${data.photo ? `<img src="${data.photo}" alt="Photo de profil" class="img-thumbnail" style="max-width: 200px;">` : ''}
+                `;
             document.getElementById('user-name').textContent = data.name || 'Utilisateur';
             document.getElementById('user-description').textContent = data.description || 'UI Designer';
             document.getElementById('user-avatar').style.backgroundImage = `url(${data.photo || './static/avatars/000m.jpg'})`;
@@ -293,35 +331,31 @@
         }
     }
 
-    // Gestion du lien Profil
-    document.getElementById('profile-link').addEventListener('click', async (e) => {
-        e.preventDefault();
-        console.log('Clic sur le lien Profil');
-        try {
-            const response = await fetch('/profile', {
-                headers: {
-                    'Authorization': 'Bearer ' + token,
-                    'Accept': 'text/html',
-                },
-            });
+    async function loadusers(){
+        console.log('Requête vers /users');
+        try{
+        const response = await fetch('/users', {
+            headers: {
+                'Authorization': 'Bearer ' + token,
+                'Accept': 'application/json',
+            },
+        });
 
-            console.log('Statut /profile:', response.status, response.statusText);
-
-            if (response.ok) {
-                const html = await response.text();
-                document.open();
-                document.write(html);
-                document.close();
-                window.history.pushState({}, document.title, '/profile');
-            } else {
-                console.error('Erreur lors du chargement de /profile:', response.status, response.statusText);
-                alert('Erreur d’accès au profil : ' + response.statusText);
+        console.log('Statut /users:', response.status, response.statusText);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Erreur ${response.status}: ${errorData.message || response.statusText}`);
             }
+
+            const data = await response.json();
+            console.log('Données utilisateurs:', data);
+
         } catch (error) {
-            console.error('Erreur:', error);
-            alert('Erreur inattendue');
+            console.error('Erreur réseau:', error);
+            window.location.href = '/login';
         }
-    });
+    }
+
 
     // Gestion de la déconnexion
     document.getElementById('logout-form').addEventListener('submit', async (e) => {
@@ -333,6 +367,7 @@
                 headers: {
                     'Authorization': 'Bearer ' + token,
                     'Accept': 'application/json',
+                    'X-CSRF-TOKEN': "{{ csrf_token() }}" // Ajout du token CSRF
                 },
             });
 
@@ -341,9 +376,7 @@
             if (response.ok) {
                 const data = await response.json();
                 console.log('Réponse déconnexion:', data);
-                // Supprimer le token du localStorage
-                localStorage.removeItem('token');
-                // Rediriger vers la page d'accueil
+                sessionStorage.removeItem('token');
                 window.location.href = data.redirect || '/';
             } else {
                 const errorData = await response.json();
