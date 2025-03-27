@@ -95,7 +95,7 @@
     </div>
 </div>
 <div class="modal" tabindex="-1" id="profile-modal">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Mon profil</h5>
@@ -145,7 +145,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                <button type="button" class="btn btn-primary">Sauvegarder</button>
+                <button type="button" class="btn btn-primary" id="profile-save">Sauvegarder</button>
             </div>
         </div>
     </div>
@@ -207,6 +207,23 @@ try{
             console.error('Erreur chargement utilisateur:', error);
         }
     }
+document.getElementById('profile-save').addEventListener('click',(e)=>{
+    console.log("sauvegarde du profil")
+    fetch('/profile/me',{
+        method: "PATCH",
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'X-CSRF-TOKEN': "{{ csrf_token() }}",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        },
+        body: JSON.stringify({
+            name:document.getElementById('name').value || '',
+            description:document.getElementById('description').value || '',
+            birth:document.getElementById('birth').value || '',
+        })
+    });
+})
 
     // Charger les utilisateurs
     async function loadUsers() {

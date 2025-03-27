@@ -41,7 +41,7 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/profile/me', [AuthController::class, 'profile']);
     Route::get('/users', [AppController::class, 'getUsers'])->name('users');
-    Route::patch('/profile', [AuthController::class, 'updateProfile']);
+    Route::patch('/profile/me', [AuthController::class, 'updateProfile']);
 });
 
 
