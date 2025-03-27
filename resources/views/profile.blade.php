@@ -57,7 +57,7 @@
 
     // Vérification au chargement
     window.addEventListener('load', async () => {
-        console.log('Token:', token); // Débogage
+        console.log('Token au chargement:', token);
         if (!token) {
             console.error('Aucun token trouvé');
             window.location.href = '/login';
@@ -73,12 +73,11 @@
             });
 
             if (!response.ok) {
-                console.error('Erreur lors du chargement de /profile:', response.status, response.statusText);
+                console.error('Erreur /profile:', response.status, response.statusText);
                 window.location.href = '/login';
                 return;
             }
 
-            // Charger les données du profil
             loadProfile();
         } catch (error) {
             console.error('Erreur réseau:', error);
@@ -96,14 +95,14 @@
                 },
             });
 
-            console.log('Réponse /api/profile:', response); // Débogage
+            console.log('Réponse /api/profile:', response.status, response.statusText);
 
             if (!response.ok) {
                 throw new Error(`Erreur HTTP: ${response.status}`);
             }
 
             const data = await response.json();
-            console.log('Données profil:', data); // Débogage
+            console.log('Données profil:', data);
 
             document.getElementById('name').value = data.name || '';
             document.getElementById('email').value = data.email || '';
@@ -117,7 +116,7 @@
                     ${data.photo ? `<img src="${data.photo}" alt="Photo de profil" class="img-thumbnail" style="max-width: 200px;">` : ''}
                 `;
         } catch (error) {
-            console.error('Erreur lors du chargement du profil:', error);
+            console.error('Erreur chargement profil:', error);
             document.getElementById('message').innerText = 'Erreur lors du chargement du profil';
             document.getElementById('message').className = 'text-danger';
         }
@@ -128,6 +127,11 @@
         e.preventDefault();
         const formData = new FormData(e.target);
 
+        // Débogage : Vérifier les données envoyées
+        for (let [key, value] of formData.entries()) {
+            console.log(`${key}: ${value}`);
+        }
+
         try {
             const response = await fetch('/api/profile', {
                 method: 'POST',
@@ -137,20 +141,73 @@
                 body: formData,
             });
 
+            console.log('Statut réponse mise à jour:', response.status, response.statusText);
+
             const data = await response.json();
-            console.log('Réponse mise à jour:', data); // Débogage
+            console.log('Réponse mise à jour:', data);
 
             if (response.ok) {
-                document.getElementById('message').innerText = data.message || 'Profil mis à jour';
+                document.getElementById('message').innerText = data.message || 'Profil mis à jour avec succès';
                 document.getElementById('message').className = 'text-success';
-                loadProfile(); // Recharger les données
+                loadProfile(); // Recharger les données mises à jour
             } else {
                 document.getElementById('message').innerText = data.message || 'Erreur lors de la mise à jour';
                 document.getElementById('message').className = 'text-danger';
             }
         } catch (error) {
-            console.error('Erreur lors de la mise à jour:', error);
-            document.getElementById('message').innerText = 'Erreur inattendue';
+            console.error('Erreur mise à jour:', error);
+            document.getElementById('message').innerText = 'Erreur inattendue lors de la mise à jour';
+            document.getElementById('message').className = 'text-danger';
+        }
+    });
+
+    // Mettre à jour le profil
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+
+        for (let [key, value] of formData.entries()) {
+            console.log(`${key}: ${value}`);
+        }
+
+        try {
+            const response = await fetch('/api/profile', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                },
+                body: formData,
+            });
+
+            console.log('Statut réponse mise à jour:', response.status, response.statusText);
+
+            const data = await response.json();
+            console.log('Réponse mise à jour:', data);
+
+            if (response.ok) {
+                document.getElementById('message').innerText = data.message || 'Profil mis à jour avec succès';
+                document.getElementById('message').className = 'text-success';
+                // Rediriger vers /app pour rafraîchir les données
+                const appResponse = await fetch('/app', {
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Accept': 'text/html',
+                    },
+                });
+                if (appResponse.ok) {
+                    const html = await appResponse.text();
+                    document.open();
+                    document.write(html);
+                    document.close();
+                    window.history.pushState({}, document.title, '/app');
+                }
+            } else {
+                document.getElementById('message').innerText = data.message || 'Erreur lors de la mise à jour';
+                document.getElementById('message').className = 'text-danger';
+            }
+        } catch (error) {
+            console.error('Erreur mise à jour:', error);
+            document.getElementById('message').innerText = 'Erreur inattendue lors de la mise à jour';
             document.getElementById('message').className = 'text-danger';
         }
     });

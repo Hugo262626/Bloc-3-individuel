@@ -132,7 +132,7 @@ class AuthController extends Controller
         return response()->json($user);
     }
 
-    // Mettre à jour les informations du profil
+
     public function updateProfile(Request $request)
     {
         $user = auth('api')->user();
@@ -142,31 +142,27 @@ class AuthController extends Controller
 
         // Validation des données
         $request->validate([
-            'name' => 'string|max:255',
-            'email' => 'email|unique:users,email,' . $user->id,
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|unique:users,email,' . $user->id,
             'description' => 'nullable|string',
             'birth' => 'nullable|date',
-            'photo' => 'nullable|image|max:2048', // Image max 2MB
+            'photo' => 'nullable|image|max:2048',
             'password' => 'nullable|min:6|confirmed',
         ]);
 
-        // Mise à jour des champs (seuls ceux fournis dans la requête)
-        $user->name = $request->input('name', $user->name);
-        $user->email = $request->input('email', $user->email);
-        $user->description = $request->input('description', $user->description);
-        $user->birth = $request->input('birth', $user->birth);
-
-        // Mise à jour du mot de passe si fourni
-        if ($request->filled('password')) {
-            $user->password = Hash::make($request->password);
-        }
-
-        // Gestion de la photo de profil
+        // Mise à jour uniquement des champs fournis
+        if ($request->has('name')) $user->name = $request->input('name');
+        if ($request->has('email')) $user->email = $request->input('email');
+        if ($request->has('description')) $user->description = $request->input('description');
+        if ($request->has('birth')) $user->birth = $request->input('birth');
         if ($request->hasFile('photo')) {
             $file = $request->file('photo');
             $filename = time() . '.' . $file->getClientOriginalExtension();
             $file->move(public_path('uploads'), $filename);
             $user->photo = '/uploads/' . $filename;
+        }
+        if ($request->filled('password')) {
+            $user->password = Hash::make($request->password);
         }
 
         $user->save();
@@ -177,3 +173,5 @@ class AuthController extends Controller
         ]);
     }
 }
+
+

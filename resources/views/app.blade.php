@@ -16,10 +16,10 @@
 
         <div class="nav-item dropdown">
             <a href="#" class="nav-link d-flex lh-5 p-0 px-5" data-bs-toggle="dropdown" aria-label="Open user menu">
-                <span class="avatar avatar-sm" style="background-image: url({{ auth('api')->user()->photo ?? './static/avatars/000m.jpg' }})"></span>
+                <span id="user-avatar" class="avatar avatar-sm" style="background-image: url(./static/avatars/000m.jpg)"></span>
                 <div class="d-none d-xl-block ps-2">
-                    <div>{{ auth('api')->user()->name ?? 'Utilisateur' }}</div>
-                    <div class="mt-1 small text-secondary">{{ auth('api')->user()->description ?? 'UI Designer' }}</div>
+                    <div id="user-name">Utilisateur</div>
+                    <div id="user-description" class="mt-1 small text-secondary">UI Designer</div>
                 </div>
             </a>
             <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
@@ -99,15 +99,19 @@
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <script>
     const token = localStorage.getItem('token');
+    console.log('Token initial:', token); // Débogage : Vérifier si le token est présent
 
     // Vérification au chargement de la page
     window.addEventListener('load', async () => {
+        console.log('Événement load déclenché'); // Débogage
         if (!token) {
+            console.log('Aucun token, redirection vers /login');
             window.location.href = '/login';
             return;
         }
 
         try {
+            console.log('Requête vers /app'); // Débogage
             const response = await fetch('/app', {
                 headers: {
                     'Authorization': 'Bearer ' + token,
@@ -115,34 +119,76 @@
                 },
             });
 
+            console.log('Statut /app:', response.status, response.statusText); // Débogage
+
             if (!response.ok) {
                 console.error('Erreur lors du rechargement:', response.status, response.statusText);
                 window.location.href = '/login';
+                return;
             }
-            // Si OK, continuer avec le chargement des données
+
+            // Charger les données
+            console.log('Chargement des données utilisateur, utilisateurs et carte');
+            loadUserData();
             loadUsers();
             initMap();
         } catch (error) {
-            console.error('Erreur:', error);
+            console.error('Erreur lors du chargement initial:', error);
             window.location.href = '/login';
         }
     });
 
-    // Charger les utilisateurs
-    async function loadUsers() {
+    // Charger les données de l'utilisateur pour la navbar
+    async function loadUserData() {
         try {
-            const response = await fetch('/users', {
+            console.log('Requête vers /api/profile'); // Débogage
+            const response = await fetch('/api/profile', {
                 headers: {
                     'Authorization': 'Bearer ' + token,
+                    'Accept': 'application/json',
                 },
             });
 
+            console.log('Statut /api/profile:', response.status, response.statusText); // Débogage
+
             if (!response.ok) {
-                throw new Error('Network response was not ok');
+                throw new Error(`Erreur ${response.status}: ${response.statusText}`);
             }
 
             const data = await response.json();
+            console.log('Données utilisateur:', data); // Débogage
+
+            document.getElementById('user-name').textContent = data.name || 'Utilisateur';
+            document.getElementById('user-description').textContent = data.description || 'UI Designer';
+            document.getElementById('user-avatar').style.backgroundImage = `url(${data.photo || './static/avatars/000m.jpg'})`;
+        } catch (error) {
+            console.error('Erreur chargement utilisateur:', error);
+        }
+    }
+
+    // Charger les utilisateurs
+    async function loadUsers() {
+        try {
+            console.log('Requête vers /api/users'); // Débogage
+            const response = await fetch('/api/users', {
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Accept': 'application/json',
+                },
+            });
+
+            console.log('Statut /api/users:', response.status, response.statusText); // Débogage
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Erreur ${response.status}: ${errorData.message || response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log('Données utilisateurs:', data); // Débogage
+
             const userList = document.getElementById('users-list');
+            userList.innerHTML = ''; // Vider la liste avant de la remplir
 
             data.forEach(user => {
                 const userCol = document.createElement('div');
@@ -214,11 +260,13 @@
             });
         } catch (err) {
             console.error('Erreur lors de la récupération des utilisateurs:', err);
+            document.getElementById('users-list').innerHTML = '<p class="text-danger">Erreur lors du chargement des utilisateurs.</p>';
         }
     }
 
     // Initialiser la carte Leaflet
     function initMap() {
+        console.log('Initialisation de la carte Leaflet'); // Débogage
         var map = L.map('users-map').setView([48.8566, 2.3522], 13); // Paris par défaut
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
@@ -228,7 +276,7 @@
             navigator.geolocation.getCurrentPosition(function(position) {
                 var lat = position.coords.latitude;
                 var lon = position.coords.longitude;
-
+                console.log('Position géolocalisée:', lat, lon); // Débogage
                 map.setView([lat, lon], 15);
                 L.marker([lat, lon]).addTo(map)
                     .bindPopup("Vous êtes ici !")
@@ -244,6 +292,7 @@
     // Gestion du lien Profil
     document.getElementById('profile-link').addEventListener('click', async (e) => {
         e.preventDefault();
+        console.log('Clic sur le lien Profil'); // Débogage
         try {
             const response = await fetch('/profile', {
                 headers: {
@@ -251,6 +300,8 @@
                     'Accept': 'text/html',
                 },
             });
+
+            console.log('Statut /profile:', response.status, response.statusText); // Débogage
 
             if (response.ok) {
                 const html = await response.text();

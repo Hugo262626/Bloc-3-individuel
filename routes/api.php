@@ -3,7 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Api\AppController;
 use Illuminate\Support\Facades\Route;
-
+use App\Models\User;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Http\Request;
 
@@ -42,17 +42,12 @@ Route::post('/login', [AuthController::class, 'login']);
 
 // Routes protégées avec le middleware 'auth:api' pour JWT
 Route::middleware(['auth:api'])->group(function () {
-    Route::get('/user', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
 });
 
-// Routes protégées avec le middleware 'jwt.auth'
-use App\Http\Controllers\AuthController;
-
-Route::middleware('auth:api')->group(function () {
-    Route::get('/profile', [AuthController::class, 'profile']); // Récupérer le profil
-    Route::post('/profile', [AuthController::class, 'updateProfile']); // Mettre à jour le profil
+Route::middleware('auth:api')->get('/users', function () {
+    return User::all();
 });
 
-// API publique
-Route::get('/users', [AppController::class, 'index']);
+Route::middleware('auth:api')->get('/profile', [App\Http\Controllers\AuthController::class, 'profile']);
+Route::middleware('auth:api')->post('/profile', [App\Http\Controllers\AuthController::class, 'updateProfile']);
