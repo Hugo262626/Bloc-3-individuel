@@ -19,7 +19,6 @@
                 <span id="user-avatar" class="avatar avatar-sm" style="background-image: url(./static/avatars/000m.jpg)"></span>
                 <div class="d-none d-xl-block ps-2">
                     <div id="user-name">Utilisateur</div>
-                    <div id="user-description" class="mt-1 small text-secondary">UI Designer</div>
                 </div>
             </a>
             <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
@@ -104,7 +103,10 @@
             <div class="modal-body">
                 <div class="container w-50 px-lg-5 mt-5">
                     <h2>Mon Profil</h2>
-
+                    <div class="mb-5 border-bottom-1">
+                        <label for="photo" class="form-label">Photo de profil :</label>
+                        <input type="file" accept="image/*" name="photo" id="photo" class="form-control">
+                    </div>
                     <div id="profile-info" class="mb-4">
                         <!-- Les données seront chargées ici -->
                     </div>
@@ -115,10 +117,6 @@
                             <input type="text" name="name" id="name" class="form-control">
                         </div>
                         <div class="mb-3">
-                            <label for="email" class="form-label">Email :</label>
-                            <input type="email" name="email" id="email" class="form-control">
-                        </div>
-                        <div class="mb-3">
                             <label for="description" class="form-label">Présentation :</label>
                             <textarea name="description" id="description" class="form-control"></textarea>
                         </div>
@@ -126,18 +124,7 @@
                             <label for="birth" class="form-label">Date de naissance :</label>
                             <input type="date" name="birth" id="birth" class="form-control">
                         </div>
-                        <div class="mb-3">
-                            <label for="photo" class="form-label">Photo de profil :</label>
-                            <input type="file" name="photo" id="photo" class="form-control">
-                        </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Nouveau mot de passe (optionnel) :</label>
-                            <input type="password" name="password" id="password" class="form-control">
-                        </div>
-                        <div class="mb-3">
-                            <label for="password_confirmation" class="form-label">Confirmer le mot de passe :</label>
-                            <input type="password" name="password_confirmation" id="password_confirmation" class="form-control">
-                        </div>
+
                     </form>
 
                     <div id="message" class="mt-3"></div>
@@ -190,7 +177,6 @@ try{
             const data = await response.json();
             console.log('Données utilisateur:', data);
             document.getElementById('name').value = data.name || '';
-            document.getElementById('email').value = data.email || '';
             document.getElementById('description').value = data.description || '';
             document.getElementById('birth').value = data.birth || '';
             document.getElementById('profile-info').innerHTML = `
@@ -201,7 +187,6 @@ try{
                     ${data.photo ? `<img src="${data.photo}" alt="Photo de profil" class="img-thumbnail" style="max-width: 200px;">` : ''}
                 `;
             document.getElementById('user-name').textContent = data.name || 'Utilisateur';
-            document.getElementById('user-description').textContent = data.description || 'UI Designer';
             document.getElementById('user-avatar').style.backgroundImage = `url(${data.photo || './static/avatars/000m.jpg'})`;
         } catch (error) {
             console.error('Erreur chargement utilisateur:', error);
@@ -223,7 +208,22 @@ document.getElementById('profile-save').addEventListener('click',(e)=>{
             birth:document.getElementById('birth').value || '',
         })
     });
+    document.getElementById('user-name').textContent = document.getElementById('name').value || 'Utilisateur';
+
 })
+    document.getElementById('photo').addEventListener('change',(e)=>{
+        console.log("sauvegarde du profil")
+        const formData = new FormData();
+        formData.append("photo", e.target.files[0]);
+        fetch('/profile/me',{
+            method: "PATCH",
+            headers: {
+                'Authorization': 'Bearer ' + token,
+                'X-CSRF-TOKEN': "{{ csrf_token() }}",
+            },
+            body: formData
+        });
+    })
 
     // Charger les utilisateurs
     async function loadUsers() {
