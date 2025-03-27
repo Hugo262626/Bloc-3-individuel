@@ -3,10 +3,10 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Api\AppController;
 use Illuminate\Support\Facades\Route;
-use App\Models\User;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Http\Request;
 
+// Vérification du token
 Route::get('/check-token', function (Request $request) {
     try {
         // Récupérer l'utilisateur à partir du token
@@ -21,21 +21,6 @@ Route::get('/check-token', function (Request $request) {
     }
 })->middleware('auth:api');
 
-// Vérification du token (accessible via auth:api)
-Route::get('/check-token', function () {
-    try {
-        $user = auth()->user();
-        return response()->json(['message' => 'Token valide', 'user' => $user]);
-    } catch (\Exception $e) {
-        return response()->json(['error' => 'Token invalide'], 401);
-    }
-})->middleware('auth:api');
-
-
-Route::middleware(['auth:api'])->get('/app', function () {
-    return response()->file(public_path('app.html'));
-})->name('app');
-
 // Authentification
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -43,11 +28,7 @@ Route::post('/login', [AuthController::class, 'login']);
 // Routes protégées avec le middleware 'auth:api' pour JWT
 Route::middleware(['auth:api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/users', [AppController::class, 'getUsers']); // Utilisation de AppController
+    Route::get('/profile', [AuthController::class, 'profile']);
+    Route::post('/profile', [AuthController::class, 'updateProfile']);
 });
-
-Route::middleware('auth:api')->get('/users', function () {
-    return User::all();
-});
-
-Route::middleware('auth:api')->get('/profile', [App\Http\Controllers\AuthController::class, 'profile']);
-Route::middleware('auth:api')->post('/profile', [App\Http\Controllers\AuthController::class, 'updateProfile']);

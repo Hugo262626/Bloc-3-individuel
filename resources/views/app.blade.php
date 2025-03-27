@@ -25,8 +25,7 @@
             <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
                 <a href="#" class="dropdown-item" id="profile-link">Profil</a>
                 <div class="dropdown-divider"></div>
-                <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: inline;">
-                    @csrf
+                <form id="logout-form" style="display: inline;">
                     <button type="submit" class="dropdown-item">Déconnexion</button>
                 </form>
             </div>
@@ -79,6 +78,7 @@
                                     </svg>
                                 </a>
                             </li>
+                            <!-- TODO: Implémenter une pagination dynamique en modifiant loadUsers() pour accepter un paramètre de page -->
                         </ul>
                     </div>
                 </div>
@@ -99,11 +99,11 @@
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <script>
     const token = localStorage.getItem('token');
-    console.log('Token initial:', token); // Débogage : Vérifier si le token est présent
+    console.log('Token initial:', token);
 
     // Vérification au chargement de la page
     window.addEventListener('load', async () => {
-        console.log('Événement load déclenché'); // Débogage
+        console.log('Événement load déclenché');
         if (!token) {
             console.log('Aucun token, redirection vers /login');
             window.location.href = '/login';
@@ -111,7 +111,7 @@
         }
 
         try {
-            console.log('Requête vers /app'); // Débogage
+            console.log('Requête vers /app');
             const response = await fetch('/app', {
                 headers: {
                     'Authorization': 'Bearer ' + token,
@@ -119,11 +119,15 @@
                 },
             });
 
-            console.log('Statut /app:', response.status, response.statusText); // Débogage
+            console.log('Statut /app:', response.status, response.statusText);
 
             if (!response.ok) {
                 console.error('Erreur lors du rechargement:', response.status, response.statusText);
-                window.location.href = '/login';
+                if (response.status === 401) {
+                    console.log('Token invalide ou expiré, redirection vers /login');
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                }
                 return;
             }
 
@@ -141,22 +145,22 @@
     // Charger les données de l'utilisateur pour la navbar
     async function loadUserData() {
         try {
-            console.log('Requête vers /api/profile'); // Débogage
-            const response = await fetch('/api/profile', {
+            console.log('Requête vers /profile');
+            const response = await fetch('/profile', {
                 headers: {
                     'Authorization': 'Bearer ' + token,
                     'Accept': 'application/json',
                 },
             });
 
-            console.log('Statut /api/profile:', response.status, response.statusText); // Débogage
+            console.log('Statut /profile:', response.status, response.statusText);
 
             if (!response.ok) {
                 throw new Error(`Erreur ${response.status}: ${response.statusText}`);
             }
 
             const data = await response.json();
-            console.log('Données utilisateur:', data); // Débogage
+            console.log('Données utilisateur:', data);
 
             document.getElementById('user-name').textContent = data.name || 'Utilisateur';
             document.getElementById('user-description').textContent = data.description || 'UI Designer';
@@ -169,15 +173,15 @@
     // Charger les utilisateurs
     async function loadUsers() {
         try {
-            console.log('Requête vers /api/users'); // Débogage
-            const response = await fetch('/api/users', {
+            console.log('Requête vers /users');
+            const response = await fetch('/users', {
                 headers: {
                     'Authorization': 'Bearer ' + token,
                     'Accept': 'application/json',
                 },
             });
 
-            console.log('Statut /api/users:', response.status, response.statusText); // Débogage
+            console.log('Statut /users:', response.status, response.statusText);
 
             if (!response.ok) {
                 const errorData = await response.json();
@@ -185,7 +189,7 @@
             }
 
             const data = await response.json();
-            console.log('Données utilisateurs:', data); // Débogage
+            console.log('Données utilisateurs:', data);
 
             const userList = document.getElementById('users-list');
             userList.innerHTML = ''; // Vider la liste avant de la remplir
@@ -266,7 +270,7 @@
 
     // Initialiser la carte Leaflet
     function initMap() {
-        console.log('Initialisation de la carte Leaflet'); // Débogage
+        console.log('Initialisation de la carte Leaflet');
         var map = L.map('users-map').setView([48.8566, 2.3522], 13); // Paris par défaut
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
@@ -276,7 +280,7 @@
             navigator.geolocation.getCurrentPosition(function(position) {
                 var lat = position.coords.latitude;
                 var lon = position.coords.longitude;
-                console.log('Position géolocalisée:', lat, lon); // Débogage
+                console.log('Position géolocalisée:', lat, lon);
                 map.setView([lat, lon], 15);
                 L.marker([lat, lon]).addTo(map)
                     .bindPopup("Vous êtes ici !")
@@ -292,7 +296,7 @@
     // Gestion du lien Profil
     document.getElementById('profile-link').addEventListener('click', async (e) => {
         e.preventDefault();
-        console.log('Clic sur le lien Profil'); // Débogage
+        console.log('Clic sur le lien Profil');
         try {
             const response = await fetch('/profile', {
                 headers: {
@@ -301,7 +305,7 @@
                 },
             });
 
-            console.log('Statut /profile:', response.status, response.statusText); // Débogage
+            console.log('Statut /profile:', response.status, response.statusText);
 
             if (response.ok) {
                 const html = await response.text();
@@ -316,6 +320,39 @@
         } catch (error) {
             console.error('Erreur:', error);
             alert('Erreur inattendue');
+        }
+    });
+
+    // Gestion de la déconnexion
+    document.getElementById('logout-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        console.log('Tentative de déconnexion');
+        try {
+            const response = await fetch('/logout', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Accept': 'application/json',
+                },
+            });
+
+            console.log('Statut /logout:', response.status, response.statusText);
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Réponse déconnexion:', data);
+                // Supprimer le token du localStorage
+                localStorage.removeItem('token');
+                // Rediriger vers la page d'accueil
+                window.location.href = data.redirect || '/';
+            } else {
+                const errorData = await response.json();
+                console.error('Erreur lors de la déconnexion:', errorData);
+                alert('Erreur lors de la déconnexion');
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+            alert('Erreur inattendue lors de la déconnexion');
         }
     });
 </script>

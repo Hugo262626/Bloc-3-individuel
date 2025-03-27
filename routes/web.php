@@ -1,36 +1,15 @@
 <?php
 
-
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
-Route::get('/check-token', function (Request $request) {
-    try {
-        // Récupérer l'utilisateur à partir du token
-        $user = JWTAuth::parseToken()->authenticate();
-        return response()->json(['message' => 'Token valide', 'user' => $user]);
-    } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
-        return response()->json(['error' => 'Token expiré'], 401);
-    } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
-        return response()->json(['error' => 'Token invalide'], 401);
-    } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
-        return response()->json(['error' => 'Token absent'], 401);
-    }
-});
-
-
-Route::middleware(['auth:api'])->get('/app', function () {
-    return view('app');
-})->name('app');
-
-
 Route::get('/', function () {
-    return response()->file(public_path('index.html'));
+    return view('welcome'); // Remplace index.html par une vue Blade si nécessaire
 });
-// Routes pour login et logout
+
+// Routes pour login et register
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login.form');
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
@@ -38,13 +17,21 @@ Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('regi
 Route::post('/register', [AuthController::class, 'register'])->name('register');
 
 // Déconnexion
-Route::post('/logout', function () {
-    Auth::logout();
-    request()->session()->invalidate();
-    request()->session()->regenerateToken();
-    return redirect('/');
-})->name('logout');
+Route::post('/logout', function (Request $request) {
+    try {
+        // Invalider le token JWT
+        JWTAuth::parseToken()->invalidate();
+        // Supprimer le token du localStorage côté client (via JavaScript dans app.blade.php)
+        return response()->json(['message' => 'Déconnexion réussie', 'redirect' => '/']);
+    } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
+        return response()->json(['error' => 'Erreur lors de la déconnexion'], 500);
+    }
+})->name('logout')->middleware('auth:api');
 
+// Routes protégées par auth:api
+Route::middleware(['auth:api'])->get('/app', function () {
+    return view('app');
+})->name('app');
 
 Route::middleware(['auth:api'])->get('/profile', function () {
     return view('profile');
