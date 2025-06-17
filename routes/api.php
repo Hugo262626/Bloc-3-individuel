@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 
 // Vérification du token
 Route::get('/check-token', function (Request $request) {
+    Log::info('Route /check-token appelée');
     try {
         // Récupérer l'utilisateur à partir du token
         $user = JWTAuth::parseToken()->authenticate();

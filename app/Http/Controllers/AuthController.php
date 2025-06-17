@@ -11,13 +11,9 @@ use Tymon\JWTAuth\Exceptions\JWTException;
 
 class AuthController extends Controller
 {
-    // Affichage du formulaire d'inscription
-    public function showRegisterForm()
-    {
-        return view('auth.register');
-    }
-
-    // Inscription de l'utilisateur
+    /**
+     * Inscription d'un nouvel utilisateur via API.
+     */
     public function register(Request $request)
     {
         // Validation des champs
@@ -39,8 +35,8 @@ class AuthController extends Controller
                 'password' => Hash::make($request->password),
             ]);
 
-            // Générer un token JWT
-            $token = JWTAuth::fromUser($user);
+            // Générer un token JWT avec createToken
+            $token = $user->createToken('auth_token')->plainTextToken;
 
             // Retourner une réponse JSON avec le token
             return response()->json([
@@ -56,13 +52,9 @@ class AuthController extends Controller
         }
     }
 
-    // Affichage du formulaire de connexion
-    public function showLoginForm()
-    {
-        return view('auth.login');
-    }
-
-    // Connexion de l'utilisateur
+    /**
+     * Connexion d'un utilisateur via API.
+     */
     public function login(Request $request)
     {
         // Validation des données
@@ -75,17 +67,19 @@ class AuthController extends Controller
 
         try {
             // Tenter de générer un token JWT
-            if (!$token = JWTAuth::attempt($credentials)) {
+            if (!$token = auth()->attempt($credentials)) {
                 return response()->json([
                     'message' => 'Identifiants invalides',
                 ], 401);
             }
 
-            // Retourner le token dans une réponse JSON
+            // Récupère l'utilisateur authentifié
+            $user = auth()->user();
+
             return response()->json([
                 'message' => 'Connexion réussie',
                 'token' => $token,
-                'user' => auth('api')->user(), // Récupère l'utilisateur authentifié via JWT
+                'user' => $user,
             ]);
         } catch (JWTException $e) {
             return response()->json([
@@ -95,7 +89,9 @@ class AuthController extends Controller
         }
     }
 
-    // Retourner les informations de l'utilisateur connecté
+    /**
+     * Retourner les informations de l'utilisateur connecté.
+     */
     public function me(Request $request)
     {
         try {
@@ -109,11 +105,13 @@ class AuthController extends Controller
         }
     }
 
-    // Déconnexion (invalider le token JWT)
+    /**
+     * Déconnexion (invalider le token JWT).
+     */
     public function logout()
     {
         try {
-            JWTAuth::invalidate(JWTAuth::getToken());
+            auth()->logout(); // Invalide le token courant
             return response()->json(['message' => 'Déconnexion réussie']);
         } catch (JWTException $e) {
             return response()->json([
@@ -123,6 +121,9 @@ class AuthController extends Controller
         }
     }
 
+    /**
+     * Retourner le profil de l'utilisateur connecté.
+     */
     public function profile()
     {
         $user = auth('api')->user();
@@ -132,7 +133,9 @@ class AuthController extends Controller
         return response()->json($user);
     }
 
-
+    /**
+     * Mettre à jour le profil de l'utilisateur connecté.
+     */
     public function updateProfile(Request $request)
     {
         $user = auth('api')->user();
@@ -173,5 +176,3 @@ class AuthController extends Controller
         ]);
     }
 }
-
-

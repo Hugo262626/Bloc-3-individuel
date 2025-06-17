@@ -105,6 +105,21 @@ return [
         ),
     ],
 
+    'middlewareGroups' => [
+        'web' => [
+            \App\Http\Middleware\EncryptCookies::class,
+            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+            \Illuminate\Session\Middleware\StartSession::class,
+            // ... autres middlewares web existants
+        ],
+
+        'api' => [
+            'throttle:60,1', // Limite les requêtes (optionnel)
+            'bindings',      // Lie les modèles aux routes
+            \App\Http\Middleware\JWTAuthMiddleware::class, // Ajoute ton middleware JWT
+        ],
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Maintenance Mode Driver
