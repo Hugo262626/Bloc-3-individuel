@@ -13,18 +13,18 @@
         <a class="navbar-brand p-0" href="#">
             <img src="/images/logo.png" alt="Logo" style="max-height: 90px;">
         </a>
-
         <div class="nav-item dropdown">
             <a href="#" class="nav-link d-flex lh-5 p-0 px-5" data-bs-toggle="dropdown" aria-label="Open user menu">
-                <span id="user-avatar" class="avatar avatar-sm" style="background-image: url(./static/avatars/000m.jpg)"></span>
+                <span id="user-avatar" class="avatar avatar-sm" style="background-image: url({{ auth()->user()->photo ?? './static/avatars/000m.jpg' }})"></span>
                 <div class="d-none d-xl-block ps-2">
-                    <div id="user-name">Utilisateur</div>
+                    <div id="user-name">{{ auth()->user()->name ?? 'Utilisateur' }}</div>
                 </div>
             </a>
             <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
                 <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#profile-modal">Profil</button>
                 <div class="dropdown-divider"></div>
-                <form id="logout-form" style="display: inline;">
+                <form action="{{ route('logout') }}" method="POST" style="display: inline;">
+                    @csrf
                     <button type="submit" class="dropdown-item">Déconnexion</button>
                 </form>
             </div>
@@ -77,11 +77,9 @@
                                     </svg>
                                 </a>
                             </li>
-                            <!-- TODO: Implémenter une pagination dynamique en modifiant loadUsers() pour accepter un paramètre de page -->
                         </ul>
                     </div>
                 </div>
-
                 <div class="tab-pane fade" id="carte-tab-pane" role="tabpanel" aria-labelledby="carte-tab" tabindex="0">
                     <div class="card">
                         <div class="card-body">
@@ -93,6 +91,7 @@
         </div>
     </div>
 </div>
+
 <div class="modal" tabindex="-1" id="profile-modal">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -110,8 +109,8 @@
                     <div id="profile-info" class="mb-4">
                         <!-- Les données seront chargées ici -->
                     </div>
-
                     <form id="profile-form" enctype="multipart/form-data">
+                        @csrf
                         <div class="mb-3">
                             <label for="name" class="form-label">Nom :</label>
                             <input type="text" name="name" id="name" class="form-control">
@@ -124,9 +123,7 @@
                             <label for="birth" class="form-label">Date de naissance :</label>
                             <input type="date" name="birth" id="birth" class="form-control">
                         </div>
-
                     </form>
-
                     <div id="message" class="mt-3"></div>
                 </div>
             </div>
@@ -137,6 +134,7 @@
         </div>
     </div>
 </div>
+
 <div class="modal" tabindex="-1" id="chat">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -146,7 +144,7 @@
             </div>
             <div class="modal-body">
                 <div class="container w-50 px-lg-5 mt-5">
-
+                    <!-- Contenu du chat -->
                 </div>
             </div>
             <div class="modal-footer">
@@ -155,41 +153,25 @@
         </div>
     </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/js/tabler.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <script>
-    const token = sessionStorage.getItem('token');
-    console.log('Token initial:', token);
-    if (!token) {
-        console.log('Aucun token, redirection vers /login');
-        window.location.href = '/login';
-    }
-try{
-            // Charger les données
-            console.log('Chargement des données utilisateur, utilisateurs et carte');
-            loadUserData();
-            loadUsers();
-            initMap();
-        } catch (error) {
-            console.error('Erreur lors du chargement initial:', error);
-            window.location.href = '/login';
-        }
-
-    // Charger les données de l'utilisateur pour la navbar
+    // Charger les données utilisateur pour la navbar et le profil
     async function loadUserData() {
         try {
-            console.log('Requête vers /profile/me');
-            const response = await fetch('/profile/me', {
+            console.log('Requête vers /web/profile');
+            const response = await fetch('/web/profile', {
                 headers: {
-                    'Authorization': 'Bearer ' + token,
                     'Accept': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
             });
 
-            console.log('Statut /profile/me:', response.status, response.statusText);
+            console.log('Statut /web/profile:', response.status, response.statusText);
 
             if (!response.ok) {
-               // throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+                throw new Error(`Erreur ${response.status}: ${response.statusText}`);
             }
 
             const data = await response.json();
@@ -198,74 +180,42 @@ try{
             document.getElementById('description').value = data.description || '';
             document.getElementById('birth').value = data.birth || '';
             document.getElementById('profile-info').innerHTML = `
-                    <p><strong>Nom :</strong> ${data.name || 'Non défini'}</p>
-                    <p><strong>Email :</strong> ${data.email || 'Non défini'}</p>
-                    <p><strong>Présentation :</strong> ${data.description || 'Non définie'}</p>
-                    <p><strong>Date de naissance :</strong> ${data.birth || 'Non définie'}</p>
-                    ${data.photo ? `<img src="${data.photo}" alt="Photo de profil" class="img-thumbnail" style="max-width: 200px;">` : ''}
-                `;
+                <p><strong>Nom :</strong> ${data.name || 'Non défini'}</p>
+                <p><strong>Email :</strong> ${data.email || 'Non défini'}</p>
+                <p><strong>Présentation :</strong> ${data.description || 'Non définie'}</p>
+                <p><strong>Date de naissance :</strong> ${data.birth || 'Non définie'}</p>
+                ${data.photo ? `<img src="${data.photo}" alt="Photo de profil" class="img-thumbnail" style="max-width: 200px;">` : ''}
+            `;
             document.getElementById('user-name').textContent = data.name || 'Utilisateur';
             document.getElementById('user-avatar').style.backgroundImage = `url(${data.photo || './static/avatars/000m.jpg'})`;
         } catch (error) {
             console.error('Erreur chargement utilisateur:', error);
+            document.getElementById('message').innerText = 'Erreur lors du chargement du profil';
         }
     }
-document.getElementById('profile-save').addEventListener('click',(e)=>{
-    console.log("sauvegarde du profil")
-    fetch('/profile/me',{
-        method: "PATCH",
-        headers: {
-            'Authorization': 'Bearer ' + token,
-            'X-CSRF-TOKEN': "{{ csrf_token() }}",
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        },
-        body: JSON.stringify({
-            name:document.getElementById('name').value || '',
-            description:document.getElementById('description').value || '',
-            birth:document.getElementById('birth').value || '',
-        })
-    });
-    document.getElementById('user-name').textContent = document.getElementById('name').value || 'Utilisateur';
 
-})
-    document.getElementById('photo').addEventListener('change',(e)=>{
-        console.log("sauvegarde du profil")
-        const formData = new FormData();
-        formData.append("photo", e.target.files[0]);
-        fetch('/profile/me',{
-            method: "PATCH",
-            headers: {
-                'Authorization': 'Bearer ' + token,
-                'X-CSRF-TOKEN': "{{ csrf_token() }}",
-            },
-            body: formData
-        });
-    })
-
-    // Charger les utilisateurs
+    // Charger les utilisateurs pour la liste
     async function loadUsers() {
         try {
-            console.log('Requête vers /users');
-            const response = await fetch('/users', {
+            console.log('Requête vers /web/users');
+            const response = await fetch('/web/users', {
                 headers: {
-                    'Authorization': 'Bearer ' + token,
                     'Accept': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
             });
 
-            console.log('Statut /users:', response.status, response.statusText);
+            console.log('Statut /web/users:', response.status, response.statusText);
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Erreur ${response.status}: ${errorData.message || response.statusText}`);
+                throw new Error(`Erreur ${response.status}: ${response.statusText}`);
             }
 
             const data = await response.json();
             console.log('Données utilisateurs:', data);
 
             const userList = document.getElementById('users-list');
-            userList.innerHTML = ''; // Vider la liste avant de la remplir
+            userList.innerHTML = '';
 
             data.forEach(user => {
                 const userCol = document.createElement('div');
@@ -312,33 +262,33 @@ document.getElementById('profile-save').addEventListener('click',(e)=>{
                 const messageLink = document.createElement('a');
                 messageLink.href = '#';
                 messageLink.classList.add('card-btn');
-                messageLink.setAttribute("data-bs-toggle",'modal');
-                messageLink.setAttribute("data-bs-target","#chat");
+                messageLink.setAttribute("data-bs-toggle", 'modal');
+                messageLink.setAttribute("data-bs-target", "#chat");
                 messageLink.innerHTML = `
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon me-2 text-muted icon-3">
-                            <path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10z"></path>
-                            <path d="M3 7l9 6l9 -6"></path>
-                        </svg>
-                        Message
-                    `;
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon me-2 text-muted icon-3">
+                        <path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10z"></path>
+                        <path d="M3 7l9 6l9 -6"></path>
+                    </svg>
+                    Message
+                `;
                 actionContainer.appendChild(messageLink);
 
                 const callLink = document.createElement('a');
                 callLink.href = '#';
                 callLink.classList.add('card-btn');
                 callLink.innerHTML = `
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon me-2 text-muted icon-3">
-                            <path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"></path>
-                        </svg>
-                        Contact
-                    `;
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon me-2 text-muted icon-3">
+                        <path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"></path>
+                    </svg>
+                    Contact
+                `;
                 actionContainer.appendChild(callLink);
 
                 card.appendChild(actionContainer);
                 userList.appendChild(userCol);
             });
-        } catch (err) {
-            console.error('Erreur lors de la récupération des utilisateurs:', err);
+        } catch (error) {
+            console.error('Erreur lors de la récupération des utilisateurs:', error);
             document.getElementById('users-list').innerHTML = '<p class="text-danger">Erreur lors du chargement des utilisateurs.</p>';
         }
     }
@@ -368,63 +318,75 @@ document.getElementById('profile-save').addEventListener('click',(e)=>{
         }
     }
 
-    async function loadusers(){
-        console.log('Requête vers /users');
-        try{
-        const response = await fetch('/users', {
-            headers: {
-                'Authorization': 'Bearer ' + token,
-                'Accept': 'application/json',
-            },
-        });
+    // Sauvegarde du profil
+    document.getElementById('profile-save').addEventListener('click', async () => {
+        console.log("Sauvegarde du profil");
+        const formData = new FormData();
+        formData.append('name', document.getElementById('name').value || '');
+        formData.append('description', document.getElementById('description').value || '');
+        formData.append('birth', document.getElementById('birth').value || '');
+        formData.append('_method', 'PATCH');
+        formData.append('_token', '{{ csrf_token() }}');
 
-        console.log('Statut /users:', response.status, response.statusText);
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Erreur ${response.status}: ${errorData.message || response.statusText}`);
-            }
-
-            const data = await response.json();
-            console.log('Données utilisateurs:', data);
-
-        } catch (error) {
-            console.error('Erreur réseau:', error);
-            window.location.href = '/login';
-        }
-    }
-
-
-    // Gestion de la déconnexion
-    document.getElementById('logout-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        console.log('Tentative de déconnexion');
         try {
-            const response = await fetch('/logout', {
+            const response = await fetch('/web/profile', {
                 method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer ' + token,
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': "{{ csrf_token() }}" // Ajout du token CSRF
-                },
+                body: formData,
             });
 
-            console.log('Statut /logout:', response.status, response.statusText);
-
+            const data = await response.json();
+            console.log('Réponse sauvegarde:', data);
             if (response.ok) {
-                const data = await response.json();
-                console.log('Réponse déconnexion:', data);
-                sessionStorage.removeItem('token');
-                window.location.href = data.redirect || '/';
+                document.getElementById('message').innerText = 'Profil mis à jour avec succès';
+                document.getElementById('message').className = 'mt-3 text-success';
+                document.getElementById('user-name').textContent = data.user.name || 'Utilisateur';
             } else {
-                const errorData = await response.json();
-                console.error('Erreur lors de la déconnexion:', errorData);
-                alert('Erreur lors de la déconnexion');
+                document.getElementById('message').innerText = data.message || 'Erreur lors de la sauvegarde';
+                document.getElementById('message').className = 'mt-3 text-danger';
             }
         } catch (error) {
-            console.error('Erreur:', error);
-            alert('Erreur inattendue lors de la déconnexion');
+            console.error('Erreur sauvegarde:', error);
+            document.getElementById('message').innerText = 'Erreur inattendue lors de la sauvegarde';
+            document.getElementById('message').className = 'mt-3 text-danger';
         }
     });
+
+    // Sauvegarde de la photo
+    document.getElementById('photo').addEventListener('change', async (e) => {
+        console.log("Sauvegarde de la photo");
+        const formData = new FormData();
+        formData.append('photo', e.target.files[0]);
+        formData.append('_method', 'PATCH');
+        formData.append('_token', '{{ csrf_token() }}');
+
+        try {
+            const response = await fetch('/web/profile', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const data = await response.json();
+            console.log('Réponse sauvegarde photo:', data);
+            if (response.ok) {
+                document.getElementById('message').innerText = 'Photo mise à jour avec succès';
+                document.getElementById('message').className = 'mt-3 text-success';
+                document.getElementById('user-avatar').style.backgroundImage = `url(${data.user.photo || './static/avatars/000m.jpg'})`;
+            } else {
+                document.getElementById('message').innerText = data.message || 'Erreur lors de la sauvegarde';
+                document.getElementById('message').className = 'mt-3 text-danger';
+            }
+        } catch (error) {
+            console.error('Erreur sauvegarde photo:', error);
+            document.getElementById('message').innerText = 'Erreur inattendue lors de la sauvegarde';
+            document.getElementById('message').className = 'mt-3 text-danger';
+        }
+    });
+
+    // Chargement initial
+    console.log('Chargement des données utilisateur, utilisateurs et carte');
+    loadUserData();
+    loadUsers();
+    initMap();
 </script>
 </body>
 </html>

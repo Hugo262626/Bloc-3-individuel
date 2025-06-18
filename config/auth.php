@@ -14,7 +14,7 @@ return [
     */
 
     'defaults' => [
-        'guard' => 'api',  // pour utiliser JWT
+        'guard' => 'web', // Garde par défaut pour le web (sessions)
         'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
     ],
 
@@ -31,11 +31,15 @@ return [
     | users are actually retrieved out of your database or other storage
     | system used by the application. Typically, Eloquent is utilized.
     |
-    | Supported: "session"
+    | Supported: "session", "jwt"
     |
     */
 
     'guards' => [
+        'web' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
         'api' => [
             'driver' => 'jwt',
             'provider' => 'users',
@@ -62,13 +66,8 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', App\Models\User::class),
+            'model' => App\Models\User::class, // Simplifié pour éviter l'usage de env()
         ],
-
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
     ],
 
     /*
@@ -100,9 +99,9 @@ return [
     ],
 
     /*
-    |--------------------------------------------------------------------------
+    |------------------------------------------------------------------------
     | Password Confirmation Timeout
-    |--------------------------------------------------------------------------
+    |------------------------------------------------------------------------
     |
     | Here you may define the amount of seconds before a password confirmation
     | window expires and users are asked to re-enter their password via the

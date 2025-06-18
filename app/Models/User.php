@@ -23,7 +23,6 @@ class User extends Authenticatable implements JWTSubject
         'latitude',
         'longitude',
         'birth',
-        'year',
         'description',
         'photo',
     ];
@@ -48,6 +47,7 @@ class User extends Authenticatable implements JWTSubject
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'birth' => 'date', // Ajout du cast pour birth
         ];
     }
 
@@ -58,7 +58,7 @@ class User extends Authenticatable implements JWTSubject
      */
     public function getJWTIdentifier()
     {
-        return $this->getKey(); // Retourne l'ID de l'utilisateur (généralement l'ID primaire)
+        return $this->getKey();
     }
 
     /**
@@ -68,6 +68,6 @@ class User extends Authenticatable implements JWTSubject
      */
     public function getJWTCustomClaims()
     {
-        return []; // Tu peux ajouter des informations supplémentaires ici si nécessaire
+        return [];
     }
 }
